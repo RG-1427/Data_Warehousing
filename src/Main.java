@@ -21,6 +21,9 @@ public class Main {
     public static JFrame frame = new JFrame("Welcome to the Gloucestershire Library");
     private static Date selectedDate;
     private static String selectedCourse;
+    private static String selectedBook;
+    private static String selectedBookType;
+    private static String selectedPaymentType;
 
     public static void main(String[] args) {
         database.connectToDatabase();
@@ -73,7 +76,7 @@ public class Main {
 
     public static void login(String email, String pwd){
         role = database.login(email, pwd);
-        closeLogin();
+        closeLogin(email);
     }
 
     public static void logout(JFrame frame){
@@ -83,8 +86,9 @@ public class Main {
         welcome();
     }
 
-    public static void closeLogin(){
+    public static void closeLogin(String email){
         if(passwordAttempts >= 3){
+            database.lockAccount(email);
             frame.dispose();
             passwordAttempts = 1;
         } else{
@@ -113,6 +117,9 @@ public class Main {
                         break;
                     case "head librarian":
                         headLibrarian();
+                        break;
+                    case "locked":
+                        showMessageDialog("Your account is currently locked because of too many attempts. Try again tomorrow.");
                         break;
                 }
             }
@@ -149,7 +156,6 @@ public class Main {
         studentPanel.setVisible(true);
     }
 
-    //DONE
     public static void schoolHead(){
         JFrame schoolHeadPanel = new JFrame("School Head Panel");
         schoolHeadPanel.setSize(500, 250);
@@ -205,7 +211,6 @@ public class Main {
         schoolHeadPanel.setVisible(true);
     }
 
-    //FINISH
     public static void courseLeader(){
         JFrame courseLeaderPanel = new JFrame("Course Leader Panel");
         courseLeaderPanel.setSize(500, 250);
@@ -266,7 +271,6 @@ public class Main {
         courseLeaderPanel.setVisible(true);
     }
 
-    //FINISH
     public static void headLibrarian(){
         JFrame headLibrarianPanel = new JFrame("Head Librarian Panel");
         headLibrarianPanel.setSize(500, 250);
@@ -280,13 +284,21 @@ public class Main {
 
         booksLate.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                database.percentageReturnedLate();
+                double percentage = database.percentageReturnedLate();
+                showMessageDialog("The percentage of books returned late is " + percentage);
             }
         });
 
         outOfStock.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                database.closeOutOfStock();
+                String book = pickBook(database.getBookList());
+                if(book != null){
+                    Date date = monthPicker();
+                    if(date != null) {
+                        int closeOutOfStock = database.closeOutOfStock(date, book);
+                        showMessageDialog(book + " is " + closeOutOfStock + " copies away from being out of stock");
+                    }
+                }
             }
         });
 
@@ -305,7 +317,6 @@ public class Main {
         headLibrarianPanel.setVisible(true);
     }
 
-    //FINISH
     public static void viceChancellor(){
         JFrame chancellorPanel = new JFrame("Vice Chancellor Panel");
         chancellorPanel.setSize(500, 250);
@@ -313,26 +324,45 @@ public class Main {
         chancellorPanel.setLayout(new GridLayout(4, 1));
 
         // Add buttons to the panel
-        JButton booksBorrowed = new JButton("Percentage of Books Borrowed Per Month");
+        JButton booksBorrowed = new JButton("Number of Books Borrowed Per Month");
         JButton bookType = new JButton("Percentage Book Type Being Taken Out");
         JButton loansNum = new JButton("Total Loans Per Course in a Month");
         JButton logoutButton = new JButton("Logout");
 
         booksBorrowed.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                database.percentageBorrowed();
+                Date date = monthPicker();
+                if(date != null) {
+                    double per = database.numberBorrowed(date);
+                    SimpleDateFormat sdf = new SimpleDateFormat("MMMM yyyy", Locale.ENGLISH);
+                    String month = sdf.format(date);
+                    showMessageDialog("The number of books borrowed within " + month + " is " + per);
+                }
             }
         });
 
         bookType.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                database.bookTypeTakenOut();
+                String bookType = pickType(database.getBookTypes());
+                if(bookType != null) {
+                    double type = database.bookTypeTakenOut(bookType);
+                    showMessageDialog("The percentage of loans of " + bookType + " is " + type);
+                }
             }
         });
 
         loansNum.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                database.loansPerCourseInMonth();
+                String course = pickCourse(database.getCourseList());
+                if(course != null){
+                    Date date = monthPicker();
+                    if(date != null){
+                        int loans = database.loansPerCourseInMonth(course, date);
+                        SimpleDateFormat sdf = new SimpleDateFormat("MMMM yyyy", Locale.ENGLISH);
+                        String month = sdf.format(date);
+                        showMessageDialog("There were " + loans + " loan(s) in " + course + " within " + month);
+                    }
+                }
             }
         });
 
@@ -352,7 +382,6 @@ public class Main {
         chancellorPanel.setVisible(true);
     }
 
-    //FINISH
     public static void incomeTeam(){
         JFrame incomeTeamPanel = new JFrame("Income Team Panel");
         incomeTeamPanel.setSize(500, 250);
@@ -367,19 +396,30 @@ public class Main {
 
         paymentMethod.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                database.finesPerPaymentMethod();
+                String payment = pickPaymentType(database.getPaymentTypes());
+                if(payment != null) {
+                    double per = database.finesPerPaymentMethod(payment);
+                    showMessageDialog(per + " % of fines are paid by " + payment);
+                }
             }
         });
 
         finePayment.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                database.timeToFinePayment();
+                int days = database.timeToFinePayment();
+                showMessageDialog("It takes a student an average of " + days + " to pay their fines");
             }
         });
 
         finesPaid.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                database.finesPaidInMonth();
+                Date date = monthPicker();
+                if(date != null) {
+                    int amount = database.finesPaidInMonth(date);
+                    SimpleDateFormat sdf = new SimpleDateFormat("MMMM yyyy", Locale.ENGLISH);
+                    String month = sdf.format(date);
+                    showMessageDialog(amount + "£ was paid in " + month + " for fines");
+                }
             }
         });
 
@@ -401,7 +441,7 @@ public class Main {
 
     public static Date monthPicker() {
         JFrame parentFrame = new JFrame();
-        JDialog dialog = new JDialog(parentFrame, "Pick Month", true);
+        JDialog dialog = new JDialog(parentFrame, "Pick Month / Year", true);
 
         // Create the date picker
         Properties properties = new Properties();
@@ -478,6 +518,123 @@ public class Main {
 
         // Return the selected course
         return selectedCourse;
+    }
+
+    public static String pickBook(String[] books) {
+        JFrame parentFrame = new JFrame();
+        JDialog dialog = new JDialog(parentFrame, "Pick Book", true);
+
+        // Create the JComboBox with the list of courses
+        JComboBox<String> bookComboBox = new JComboBox<>(books);
+
+        // Create the "OK" button
+        JButton okButton = new JButton("OK");
+
+        // Add action listener to the "OK" button
+        okButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                // Get the selected course from the combo box
+                selectedBook = (String) bookComboBox.getSelectedItem();
+
+                // Close the dialog
+                dialog.dispose();
+            }
+        });
+
+        // Layout components
+        JPanel panel = new JPanel(new GridLayout(2, 1));
+        panel.add(bookComboBox);
+        panel.add(okButton);
+
+        // Add panel to the dialog
+        dialog.add(panel);
+
+        // Set dialog properties
+        dialog.pack();
+        dialog.setLocationRelativeTo(parentFrame);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setVisible(true);
+
+        // Return the selected course
+        return selectedBook;
+    }
+
+    public static String pickType(String[] types) {
+        JFrame parentFrame = new JFrame();
+        JDialog dialog = new JDialog(parentFrame, "Pick Book Type", true);
+
+        // Create the JComboBox with the list of courses
+        JComboBox<String> typeComboBox = new JComboBox<>(types);
+
+        // Create the "OK" button
+        JButton okButton = new JButton("OK");
+
+        // Add action listener to the "OK" button
+        okButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                // Get the selected course from the combo box
+                selectedBookType = (String) typeComboBox.getSelectedItem();
+
+                // Close the dialog
+                dialog.dispose();
+            }
+        });
+
+        // Layout components
+        JPanel panel = new JPanel(new GridLayout(2, 1));
+        panel.add(typeComboBox);
+        panel.add(okButton);
+
+        // Add panel to the dialog
+        dialog.add(panel);
+
+        // Set dialog properties
+        dialog.pack();
+        dialog.setLocationRelativeTo(parentFrame);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setVisible(true);
+
+        // Return the selected course
+        return selectedBookType;
+    }
+
+    public static String pickPaymentType(String[] paymentTypes) {
+        JFrame parentFrame = new JFrame();
+        JDialog dialog = new JDialog(parentFrame, "Pick Payment Type", true);
+
+        // Create the JComboBox with the list of courses
+        JComboBox<String> paymentTypeComboBox = new JComboBox<>(paymentTypes);
+
+        // Create the "OK" button
+        JButton okButton = new JButton("OK");
+
+        // Add action listener to the "OK" button
+        okButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                // Get the selected course from the combo box
+                selectedPaymentType = (String) paymentTypeComboBox.getSelectedItem();
+
+                // Close the dialog
+                dialog.dispose();
+            }
+        });
+
+        // Layout components
+        JPanel panel = new JPanel(new GridLayout(2, 1));
+        panel.add(paymentTypeComboBox);
+        panel.add(okButton);
+
+        // Add panel to the dialog
+        dialog.add(panel);
+
+        // Set dialog properties
+        dialog.pack();
+        dialog.setLocationRelativeTo(parentFrame);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setVisible(true);
+
+        // Return the selected course
+        return selectedPaymentType;
     }
 
     public static void showMessageDialog(String message) {
