@@ -1,3 +1,4 @@
+//Libraries for database
 import java.time.ZoneId;
 import java.util.Date;
 import java.sql.*;
@@ -8,22 +9,18 @@ import java.util.List;
 
 public class Database {
 
-    // JDBC URL, username, and password
+    //Connection variables
     private String jdbcUrl = "jdbc:oracle:thin:@//oracle.glos.ac.uk:1521/orclpdb.chelt.local";
     private String username = "s4109300_DW";
     private String password = "s4109300_DW!";
     private Connection connection = null;
 
+    //Connecting to database
     public void connectToDatabase(){
-
+        //Attempt connecting to the database, display it works, and close the connection
         try {
-            // Register the JDBC driver
             Class.forName("oracle.jdbc.driver.OracleDriver");
-
-            // Create a connection
             connection = DriverManager.getConnection(jdbcUrl, username, password);
-
-            // Check if the connection is successful
             if (connection != null) {
                 System.out.println("Connected to the database!");
             } else {
@@ -36,7 +33,6 @@ public class Database {
             System.out.println("Failed to connect to the database!");
             e.printStackTrace();
         } finally {
-            // Close the connection
             if (connection != null) {
                 try {
                     connection.close();
@@ -47,11 +43,13 @@ public class Database {
         }
     }
 
+    //Login query
     public String login(String email, String pwd) {
+        //If user is locked exit
         if (isAccountLocked(email)) {
-            System.out.println("Account locked.");
             return "locked";
         }
+        //Attempt to return a login if the user exists
         String loginQuery = "SELECT role FROM tblUser WHERE email = ? AND pwd = ?";
         try (Connection conn = DriverManager.getConnection(jdbcUrl, username, password);
              PreparedStatement statement = conn.prepareStatement(loginQuery)) {
@@ -69,27 +67,21 @@ public class Database {
         return "";
     }
 
+    //Is account locked check
     private boolean isAccountLocked(String email) {
-        // Get today's date
+        //Get date, and compare it to the locked parameter in the database, if they are the same, return that the account is locked
         LocalDate currentDate = LocalDate.now();
-
-        // SQL query to retrieve the locked_date for the specified email
         String query = "SELECT locked FROM tblUser WHERE email = ?";
         try (Connection conn = DriverManager.getConnection(jdbcUrl, username, password);
              PreparedStatement statement = conn.prepareStatement(query)) {
-            statement.setString(1, email); // Set the email parameter
+            statement.setString(1, email);
 
-            // Execute the query
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
                     Date lockedDate = resultSet.getDate("locked");
                     if (lockedDate != null) {
                         java.util.Date utilLockedDate = new java.util.Date(lockedDate.getTime());
-
-                        // Convert java.util.Date to LocalDate
                         LocalDate lockedLocalDate = utilLockedDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-
-                        // Check if the locked date is equal to today's date
                         return lockedLocalDate.isEqual(currentDate);
                     }
                 }
@@ -98,38 +90,30 @@ public class Database {
             e.printStackTrace();
         }
 
-        // Account is not locked or not found
+        //Account is not locked
         return false;
     }
 
+    //Lock account
     public void lockAccount(String email) {
-        // Get today's date
+        //If the email entered exists in the database, set locked to today's date
         LocalDate currentDate = LocalDate.now();
-
-        // SQL update query to set the locked_date to today's date
         String updateQuery = "UPDATE tblUser SET locked = ? WHERE email = ?";
         try (Connection conn = DriverManager.getConnection(jdbcUrl, username, password);
              PreparedStatement statement = conn.prepareStatement(updateQuery)) {
-            statement.setDate(1, java.sql.Date.valueOf(currentDate)); // Set the locked_date parameter to today's date
-            statement.setString(2, email); // Set the email parameter
-
-            // Execute the update query
-            int rowsUpdated = statement.executeUpdate();
-            if (rowsUpdated > 0) {
-                System.out.println("Account locked successfully.");
-            } else {
-                System.out.println("Failed to lock account.");
-            }
+            statement.setDate(1, java.sql.Date.valueOf(currentDate));
+            statement.setString(2, email);
+            statement.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
+    //Retrieve book list
     public String[] getBookList(){
+        //Get book list for book picker GUI
         List<String> bookList = new ArrayList<>();
-
         String query = "SELECT book_name FROM tblBook";
-
         try (Connection conn = DriverManager.getConnection(jdbcUrl, username, password);
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(query)) {
@@ -142,21 +126,19 @@ public class Database {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            // Handle the exception according to your application's requirements
         }
 
         return bookList.toArray(new String[0]);
     }
 
+    //Get course list
     public String[] getCourseList(){
+        //Get course list for the course picker GUI
         List<String> courseList = new ArrayList<>();
-
         String query = "SELECT course_name FROM tblCourse";
-
         try (Connection conn = DriverManager.getConnection(jdbcUrl, username, password);
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(query)) {
-
             while (rs.next()) {
                 String courseName = rs.getString("course_name");
                 if(courseName != null && !courseList.contains(courseName)) {
@@ -166,21 +148,19 @@ public class Database {
 
         } catch (SQLException e) {
             e.printStackTrace();
-            // Handle the exception according to your application's requirements
         }
 
         return courseList.toArray(new String[0]);
     }
 
+    //Get book types
     public String[] getBookTypes(){
+        //Get book types list for the book type picker GUI
         List<String> bookTypes = new ArrayList<>();
-
         String query = "SELECT book_type FROM tblBook";
-
         try (Connection conn = DriverManager.getConnection(jdbcUrl, username, password);
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(query)) {
-
             while (rs.next()) {
                 String bookType = rs.getString("book_type");
                 if(bookType != null && !bookTypes.contains(bookType)) {
@@ -190,43 +170,39 @@ public class Database {
 
         } catch (SQLException e) {
             e.printStackTrace();
-            // Handle the exception according to your application's requirements
         }
 
         return bookTypes.toArray(new String[0]);
     }
 
+    //Get payment types
     public String[] getPaymentTypes(){
+        //get payment types for payment type picker GUI
         List<String> paymentTypes = new ArrayList<>();
-
         String query = "SELECT payment_type FROM tblFine";
-
         try (Connection conn = DriverManager.getConnection(jdbcUrl, username, password);
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(query)) {
-
             while (rs.next()) {
                 String paymentType = rs.getString("payment_type");
                 if(paymentType != null && !paymentTypes.contains(paymentType)) {
                     paymentTypes.add(paymentType);
                 }
             }
-
         } catch (SQLException e) {
             e.printStackTrace();
-            // Handle the exception according to your application's requirements
         }
 
         return paymentTypes.toArray(new String[0]);
     }
 
+    //Taken books function
     public String takenBooks(Date date){
         String mostBorrowedBookId = null;
         String mostBorrowedBookName = null;
 
-        // Connect to the database
+        //Get the most borrowed book in a month
         try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password)) {
-            // Create a PreparedStatement to execute the SQL query to find the most borrowed book ID
             String query = "SELECT book_id " +
                     "FROM tblLoan " +
                     "WHERE TO_CHAR(date_borrowed, 'YYYY-MM') = ? " +
@@ -234,80 +210,53 @@ public class Database {
                     "ORDER BY COUNT(*) DESC " +
                     "FETCH FIRST 1 ROWS ONLY";
             try (PreparedStatement statement = connection.prepareStatement(query)) {
-                // Set the parameter for the month in the SQL query
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM");
                 String monthYear = sdf.format(date);
                 statement.setString(1, monthYear);
-
-                // Execute the query to find the most borrowed book ID
                 try (ResultSet resultSet = statement.executeQuery()) {
-                    // Check if there are any results
                     if (resultSet.next()) {
-                        // Get the book_id of the most borrowed book
                         mostBorrowedBookId = resultSet.getString("book_id");
                     }
                 }
             }
 
-            // If a most borrowed book ID is found, retrieve its name
-            if (mostBorrowedBookId != null) {
-                // Create a PreparedStatement to execute the SQL query to retrieve the book name
-                String bookNameQuery = "SELECT book_name " +
-                        "FROM tblBook " +
-                        "WHERE book_id = ?";
-                try (PreparedStatement nameStatement = connection.prepareStatement(bookNameQuery)) {
-                    // Set the book ID parameter in the SQL query
-                    nameStatement.setString(1, mostBorrowedBookId);
-
-                    // Execute the query to retrieve the book name
-                    try (ResultSet nameResultSet = nameStatement.executeQuery()) {
-                        // Check if there are any results
-                        if (nameResultSet.next()) {
-                            // Get the book name of the most borrowed book
-                            mostBorrowedBookName = nameResultSet.getString("book_name");
-                        }
-                    }
-                }
+            //If the book id is not ull, get the book name from the id
+            if(mostBorrowedBookId != null){
+                mostBorrowedBookName = getBookName(mostBorrowedBookId);
             }
+
         } catch (SQLException e) {
             e.printStackTrace();
-            // Handle the exception according to your application's requirements
         }
 
-        // Return the book name of the most borrowed book
+        //Return most borrowed book name
         return mostBorrowedBookName;
     }
 
+    //Unique borrowers per month
     public int uniqueStudents(Date date){
         int uniqueStudentsCount = 0;
 
-        // Connect to the database
+        //Get the amount of unique students that have borrowed books in a month
         try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password)) {
-            // Create a PreparedStatement to execute the SQL query
             String query = "SELECT COUNT(DISTINCT u_id) AS unique_students_count " +
                     "FROM tblLoan " +
                     "WHERE TO_CHAR(date_borrowed, 'YYYY-MM') = ?";
             try (PreparedStatement statement = connection.prepareStatement(query)) {
-                // Set the parameter for the month in the SQL query
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM");
                 String monthYear = sdf.format(date);
                 statement.setString(1, monthYear);
-
-                // Execute the query
                 try (ResultSet resultSet = statement.executeQuery()) {
-                    // Check if there are any results
                     if (resultSet.next()) {
-                        // Get the count of unique students borrowing books in the month
                         uniqueStudentsCount = resultSet.getInt("unique_students_count");
                     }
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            // Handle the exception according to your application's requirements
         }
 
-        // Return the count of unique students borrowing books in the month
+        //Return the amount of unique students that have borrowed books in a month
         return uniqueStudentsCount;
     }
 
@@ -344,15 +293,7 @@ public class Database {
 
             // Retrieve the book name based on the most borrowed book ID
             if (mostBorrowedBookId != null) {
-                String queryBookName = "SELECT book_name FROM tblBook WHERE book_id = ?";
-                try (PreparedStatement statement = connection.prepareStatement(queryBookName)) {
-                    statement.setString(1, mostBorrowedBookId);
-                    try (ResultSet resultSet = statement.executeQuery()) {
-                        if (resultSet.next()) {
-                            mostBorrowedBookName = resultSet.getString("book_name");
-                        }
-                    }
-                }
+                mostBorrowedBookName = getBookName(mostBorrowedBookId);
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -363,13 +304,14 @@ public class Database {
         return mostBorrowedBookName;
     }
 
+    //Most borrowed book in a course
     public String bookMostBorrowedInACourse(String course){
+        //Get the course id based on teh course name
         String mostBorrowedBookName = null;
         int courseId = getCourseId(course);
 
-        // Connect to the database
+        //Get the most borrowed book in the course
         try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password)) {
-            // Create a PreparedStatement to execute the SQL query
             String query = "SELECT tblBook.book_name " +
                     "FROM tblLoan " +
                     "INNER JOIN tblBook ON tblLoan.book_id = tblBook.book_id " +
@@ -378,53 +320,44 @@ public class Database {
                     "ORDER BY COUNT(*) DESC " +
                     "FETCH FIRST 1 ROWS ONLY";
             try (PreparedStatement statement = connection.prepareStatement(query)) {
-                // Set the parameter for the course in the SQL query
                 statement.setInt(1, courseId);
 
                 // Execute the query
                 try (ResultSet resultSet = statement.executeQuery()) {
-                    // Check if there are any results
                     if (resultSet.next()) {
-                        // Get the book name of the most borrowed book in the course
                         mostBorrowedBookName = resultSet.getString("book_name");
                     }
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            // Handle the exception according to your application's requirements
         }
 
-        // Return the name of the most borrowed book in the course
+        //Return the most borrowed book in the course
         return mostBorrowedBookName;
     }
 
+    //Late returns percentage
     public double percentageReturnedLate(){
-        // Query to count the total number of books borrowed
+        //Queries for the total number of books and total number of late returns
         String totalBorrowedQuery = "SELECT COUNT(*) FROM tblLoan";
-
-        // Query to count the number of books returned late
         String returnedLateQuery = "SELECT COUNT(*) FROM tblLoan l1 " +
                 "INNER JOIN tblLoan l2 ON l1.loan_id = l2.loan_id " +
                 "WHERE l2.date_returned - l1.date_borrowed > 7";
 
+        //Get the number of books and number of books returned late, calculate what percentage of books were returned late
         try (Connection conn = DriverManager.getConnection(jdbcUrl, username, password);
              Statement statement = conn.createStatement()) {
-            // Execute the query to count the total number of books borrowed
             try (ResultSet totalBorrowedResult = statement.executeQuery(totalBorrowedQuery)) {
                 if (totalBorrowedResult.next()) {
                     int totalBorrowed = totalBorrowedResult.getInt(1);
-
-                    // Execute the query to count the number of books returned late
                     try (ResultSet returnedLateResult = statement.executeQuery(returnedLateQuery)) {
                         if (returnedLateResult.next()) {
                             int returnedLate = returnedLateResult.getInt(1);
-
-                            // Calculate the percentage of books returned late
                             if (totalBorrowed > 0) {
                                 return ((double) returnedLate / totalBorrowed) * 100;
                             } else {
-                                return 0.0; // If no books were borrowed, return 0%
+                                return 0.0;
                             }
                         }
                     }
@@ -434,11 +367,13 @@ public class Database {
             e.printStackTrace();
         }
 
-        // Return 0 if there's any error
+        //Return 0 if there is an error
         return 0.0;
     }
 
+    //How close is a book to being out of stock
     public int closeOutOfStock(Date date, String bookName){
+        //Calculate the number of times the book was borrowed in a month
         String query = "SELECT COUNT(*) AS borrowed_copies, " +
                 "tblBook.stock AS total_stock " +
                 "FROM tblLoan " +
@@ -447,30 +382,25 @@ public class Database {
                 "AND tblBook.book_name = ? " +
                 "GROUP BY tblBook.stock";
 
+        //Execute query
         try (Connection conn = DriverManager.getConnection(jdbcUrl, username, password);
              PreparedStatement statement = conn.prepareStatement(query)) {
-            // Set the parameters for the book name and month in the SQL query
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM");
             String monthYear = sdf.format(date);
             statement.setString(1, monthYear);
             statement.setString(2, bookName);
 
+            //If there is borrowed copies, reduce that from total stock, otherwise return the total stock
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
-                    // Get the number of copies borrowed and the total stock
                     int borrowedCopies = resultSet.getInt("borrowed_copies");
                     int totalStock = resultSet.getInt("total_stock");
 
-                    // If no copies are borrowed, return the total stock
                     if (borrowedCopies == 0) {
                         return totalStock;
                     }
-
-                    // Calculate how close the borrowed copies are to the total stock
-                    // and return the number of copies away from being out of stock
                     return totalStock - borrowedCopies;
                 } else {
-                    // No loans found, return total stock
                     query = "SELECT stock FROM tblBook WHERE book_name = ?";
 
                     try (Connection conn1 = DriverManager.getConnection(jdbcUrl, username, password);
@@ -484,63 +414,54 @@ public class Database {
                         }
                     } catch (SQLException e) {
                         e.printStackTrace();
-                        // Handle the exception according to your application's requirements
                     }
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            // Handle the exception according to your application's requirements
         }
 
-// Return -1 if any error occurs
+        //Return -1 when there is an error
         return -1;
     }
 
-
-
+    //Return number of borrowed books in a month
     public int numberBorrowed(Date date) {
+        //Calculate the number of books borrowed in a month
         String query = "SELECT COUNT(DISTINCT tblLoan.book_id) AS borrowed_books " +
                 "FROM tblLoan " +
                 "INNER JOIN tblBook ON tblLoan.book_id = tblBook.book_id " +
                 "WHERE TO_CHAR(date_borrowed, 'YYYY-MM') = ? ";
-
         try (Connection conn = DriverManager.getConnection(jdbcUrl, username, password);
              PreparedStatement statement = conn.prepareStatement(query)) {
-            // Set the parameters for the book name and month in the SQL query
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM");
             String monthYear = sdf.format(date);
             statement.setString(1, monthYear);
 
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
-                    // Get the number of books borrowed
                     int borrowedBooks = resultSet.getInt("borrowed_books");
-
-                    // Return the number of books borrowed
                     return borrowedBooks;
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        // Return 0 if there's any error
+        //Return 0 if there is an error
         return 0;
     }
 
+    //Book types taken out
     public double bookTypeTakenOut(String type){
-        // Query to calculate the percentage of loans that include the specified type of book
+        //Calculate the percentage of books taken out by the selected type and return it
         String query = "SELECT (COUNT(CASE WHEN tb.book_type = ? THEN 1 END) / COUNT(*)) * 100 AS percentage " +
                 "FROM tblLoan tl INNER JOIN tblBook tb ON tl.book_id = tb.book_id";
-
         try (Connection conn = DriverManager.getConnection(jdbcUrl, username, password);
              PreparedStatement statement = conn.prepareStatement(query)) {
-            // Set the parameter for the book type in the SQL query
             statement.setString(1, type);
 
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
-                    // Get the percentage of loans that include the specified type of book
                     double percentage = resultSet.getDouble("percentage");
                     return percentage;
                 }
@@ -549,28 +470,27 @@ public class Database {
             e.printStackTrace();
         }
 
-        // Return 0.0 if any error occurs
+        //Return 0.0 if there is an error
         return 0.0;
     }
 
+    //Loans in a course in a given month
     public int loansPerCourseInMonth(String course, Date date){
 
+        //Get course id from its name
         int courseId = getCourseId(course);
 
-        // Query to calculate the total loans for the specified course in the given month
+        //Calculate total loans in a month by course and return that
         String query = "SELECT COUNT(*) AS total_loans " +
                 "FROM tblLoan tl INNER JOIN tblBook tb ON tl.book_id = tb.book_id " +
                 "WHERE tb.course_id = ? AND TO_CHAR(tl.date_borrowed, 'YYYY-MM') = TO_CHAR(?, 'YYYY-MM')";
-
         try (Connection conn = DriverManager.getConnection(jdbcUrl, username, password);
              PreparedStatement statement = conn.prepareStatement(query)) {
-            // Set the parameters for the course and date in the SQL query
             statement.setInt(1, courseId);
             statement.setDate(2, new java.sql.Date(date.getTime()));
 
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
-                    // Get the total loans for the specified course in the given month
                     int totalLoans = resultSet.getInt("total_loans");
                     return totalLoans;
                 }
@@ -579,26 +499,22 @@ public class Database {
             e.printStackTrace();
         }
 
-        // Return 0 if there's any error
+        //Return 0 if there are no loans
         return 0;
     }
 
+    //Payment method most used for fine
     public double finesPerPaymentMethod(String paymentMethod){
+        //Calculate the total fine amount that is paid by a specific payment_type
         double percentage = 0;
         String query = "SELECT SUM(fine_amount) AS total_fines FROM tblFine WHERE payment_type = ?";
-
         try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
              PreparedStatement statement = connection.prepareStatement(query)) {
             statement.setString(1, paymentMethod);
-
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
                     double finesForPaymentMethod = resultSet.getDouble("total_fines");
-
-                    // Retrieve the total fines paid overall
                     double totalFinesOverall = getTotalFinesOverall();
-
-                    // Calculate the percentage of fines paid by the specified payment method
                     if (totalFinesOverall > 0) {
                         percentage = (finesForPaymentMethod / totalFinesOverall) * 100;
                     }
@@ -606,13 +522,15 @@ public class Database {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            // Handle the exception according to your application's requirements
         }
 
+        //Returning the percentage
         return percentage;
     }
 
+    //Total fines paid
     private double getTotalFinesOverall() throws SQLException {
+        //Calculate the total fines paid and return that
         double totalFines = 0;
         String query = "SELECT SUM(fine_amount) AS total_fines FROM tblFine";
 
@@ -624,16 +542,18 @@ public class Database {
             }
         }
 
+        //Return total fines
         return totalFines;
     }
 
+    //Time to pay fine payments
     public int timeToFinePayment(){
+        //Calculate the average days that it takes to pay the fines and return it
         int averageDays = 0;
         String query = "SELECT AVG(tf.date_paid - tl.date_returned) AS average_days " +
                 "FROM tblFine tf " +
                 "INNER JOIN tblLoan tl ON tf.fine_id = tl.fine_id " +
                 "WHERE tf.date_paid IS NOT NULL AND tl.date_returned IS NOT NULL";
-
         try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
              PreparedStatement statement = connection.prepareStatement(query);
              ResultSet resultSet = statement.executeQuery()) {
@@ -642,22 +562,22 @@ public class Database {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            // Handle the exception according to your application's requirements
         }
 
+        //Return the average days
         return averageDays;
     }
 
+    //Fines paid in a specific momth
     public int finesPaidInMonth(Date date){
+        //Calculate the amount of fines money paid in a month and return it
         int totalFines = 0;
         String query = "SELECT SUM(fine_amount) AS total_fines " +
                 "FROM tblFine " +
                 "WHERE EXTRACT(MONTH FROM date_paid) = EXTRACT(MONTH FROM TO_DATE(?, 'YYYY-MM')) " +
                 "AND EXTRACT(YEAR FROM date_paid) = EXTRACT(YEAR FROM TO_DATE(?, 'YYYY-MM'))";
-
         try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
              PreparedStatement statement = connection.prepareStatement(query)) {
-            // Set the parameter for the month and year in the SQL query
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM");
             String monthYear = sdf.format(date);
             statement.setString(1, monthYear);
@@ -670,34 +590,54 @@ public class Database {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            // Handle the exception according to your application's requirements
         }
 
+        //Return total fines amount
         return totalFines;
     }
 
+    //Get course id from course name
     public int getCourseId(String course){
-        // SQL query to retrieve the course_id based on course_name
+        //Finding the course name from a given course id and returning it
         String query = "SELECT course_id FROM tblCourse WHERE course_name = ?";
-
         try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
              PreparedStatement statement = connection.prepareStatement(query)) {
-            // Set the parameter for the course_name in the SQL query
             statement.setString(1, course);
-
-            // Execute the query
             try (ResultSet resultSet = statement.executeQuery()) {
-                // Check if there is a result
                 if (resultSet.next()) {
-                    // Retrieve the course_id from the result set
                     return resultSet.getInt("course_id");
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            // Handle the exception according to your application's requirements
         }
+        //Returning course id
         return 0;
+    }
+
+    //Get book name
+    public String getBookName(String id){
+        //Get book name from a book id and return it
+        String bookName = "";
+        if (id != null) {
+            try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password)) {
+                String bookNameQuery = "SELECT book_name " +
+                        "FROM tblBook " +
+                        "WHERE book_id = ?";
+                try (PreparedStatement nameStatement = connection.prepareStatement(bookNameQuery)) {
+                    nameStatement.setString(1, id);
+                    try (ResultSet nameResultSet = nameStatement.executeQuery()) {
+                        if (nameResultSet.next()) {
+                            bookName = nameResultSet.getString("book_name");
+                        }
+                    }
+                }
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        //Returning book name
+        return bookName;
     }
 
 }
